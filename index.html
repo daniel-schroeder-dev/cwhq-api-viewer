@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Viewer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather+Sans&family=Vollkorn:wght@500&display=swap');
+
+        html {
+            background-image: url("https://projects.codewizardshq.com/assets/p12/api-viewer-background.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        body {
+            margin: auto;
+        }
+
+        .content {
+            text-align: center;
+        }
+
+        h1 {
+            padding-top: 20px;
+            font-family: 'Vollkorn', serif;
+            font-size: 40px;
+            margin: 5px;
+            color: white;
+        }
+
+        input[type="text"] {
+            min-width: 600px;
+            border-radius: 5px;
+            border: none;
+            height: 40px;
+            text-align: center;
+            margin: 5px;
+        }
+
+
+
+        button,
+        select {
+            width: auto;
+            padding: 5px 20px;
+            cursor: pointer;
+            border-radius: 10px;
+            height: 40px;
+            margin: 5px;
+            border: 2px #14498D solid;
+            background-color: #14498D;
+            color: white;
+        }
+
+        button:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            border: 2px #14498D solid;
+        }
+
+        pre {
+            background-color: white;
+            border-radius: 10px;
+            margin: auto;
+            text-align: left;
+            margin-top: 20px;
+            overflow: scroll;
+            padding: 20px;
+        }
+
+
+        #api-data {
+            display: none;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 1200px;
+            max-height: 700px;
+        }
+
+        #form-body-enctype-container {
+            color: white;
+            padding: 10px;
+        }
+
+        #urlencoded-params {
+            padding: 12px;
+            display: none;
+        }
+
+        input[type="text"].urlencoded-params-input {
+            min-width: 300px;
+        }
+
+        .icon {
+            font-size: 35px;
+            padding: 6px;
+            cursor: pointer;
+            user-select: none;
+            /* prevents highlighting on click */
+        }
+
+        /*
+        *   https://jsfiddle.net/ourcodeworld/KJQ9K/1209/
+        */
+
+        .string {
+            color: green;
+        }
+
+        .number {
+            color: darkorange;
+        }
+
+        .boolean {
+            color: blue;
+        }
+
+        .null {
+            color: magenta;
+        }
+
+        .key {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <h1>CodeWizard's API Viewer</h1>
+        <form>
+
+            <select name="select-http-method" id="select-http-method">
+                <option value="">HTTP Method</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+            <input type="text" name="api-url" id="api-url" placeholder="Enter your API URL" />
+            <button>Send API Request</button>
+            <div id="form-body-enctype-container">
+                <h2>Form Body Enctype</h2>
+                <input type="radio" id="none" name="form-body-enctype" value="none" checked />
+                <label for="none">none</label>
+                <input type="radio" id="x-www-form-urlencoded" name="form-body-enctype" value="x-www-form-urlencoded" />
+                <label for="x-www-form-urlencoded">x-www-form-urlencoded</label>
+                <input type="radio" id="json" name="form-body-enctype" value="application/json" />
+                <label for="json">json</label>
+                <div id="urlencoded-params">
+                    <span class="icon" id="plus-icon">+</span>
+                    <span class="icon" id="minus-icon">-</span>
+                    <div>
+                        <input class="urlencoded-params-input" type="text" id="key1" name="key1" placeholder="key"
+                            data-key-number="1" />
+                        <input class="urlencoded-params-input" type="text" id="value1" name="value1" placeholder="value"
+                            data-key-number="1" />
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
+    <pre id="api-data"></pre>
+
+    <script>
+        const form = document.querySelector("form");
+        const apiURLInput = document.querySelector("#api-url")
+        const apiDataElement = document.querySelector("#api-data");
+        const selectHTTPMethodElement = document.querySelector("#select-http-method");
+        const URLEncodedParamsElement = document.querySelector("#urlencoded-params");
+        const plusIconElement = document.querySelector("#plus-icon");
+        const minusIconElement = document.querySelector("#minus-icon");
+
+        let keyNumber = 1;
+        let valueNumber = 1;
+
+        form.addEventListener("submit", formatHTTPRequest);
+        form.addEventListener("change", handleRadioButtonChange);
+
+        plusIconElement.addEventListener("click", addURLEncodedParamsElement);
+        minusIconElement.addEventListener("click", removeURLEncodedParamsElement);
+
+
+        function handleRadioButtonChange(event) {
+            if (event.target.value === "x-www-form-urlencoded") {
+                URLEncodedParamsElement.style.display = "block";
+            } else if (event.target.value == "none") {
+                URLEncodedParamsElement.style.display = "none";
+            }
+        }
+
+
+        function removeURLEncodedParamsElement() {
+            if (keyNumber <= 1) return;
+
+            document.querySelector(`#key${keyNumber}`).parentElement.remove();
+
+            keyNumber--;
+            valueNumber--;
+        }
+
+
+        function addURLEncodedParamsElement() {
+            keyNumber++;
+            valueNumber++;
+
+            const wrapperDiv = document.createElement("div");
+            const keyInput = document.createElement("input");
+            const valueInput = document.createElement("input");
+
+            keyInput.classList.add("urlencoded-params-input");
+            keyInput.type = "text";
+            keyInput.name = "key" + keyNumber;
+            keyInput.id = "key" + keyNumber;
+            keyInput.placeholder = "key";
+            keyInput.dataset.keyNumber = keyNumber;
+
+            valueInput.classList.add("urlencoded-params-input");
+            valueInput.type = "text";
+            valueInput.name = "value" + valueNumber;
+            valueInput.id = "value" + valueNumber;
+            valueInput.placeholder = "value";
+            valueInput.dataset.valueNumber = valueNumber;
+
+            wrapperDiv.append(keyInput);
+            wrapperDiv.append(valueInput);
+            URLEncodedParamsElement.append(wrapperDiv);
+        }
+
+        function formatHTTPRequest(event) {
+            event.preventDefault();
+            const data = new FormData(form);
+
+            const apiURL = apiURLInput.value;
+            const method = selectHTTPMethodElement.value;
+            const formBodyEnctype = data.get("form-body-enctype");
+            
+            const headers = buildHeaders(formBodyEnctype);
+
+            apiDataElement.innerHTML = "";
+
+            makeHTTPRequest(apiURL, method, headers)
+                .then(data => {
+                    displayAPIData(data);
+                });
+        }
+
+        const contentTypeHeaders = [
+            "x-www-form-urlencoded",
+            "application/json",
+        ]
+
+        function buildHeaders(formBodyEnctype) {
+            if (contentTypeHeaders.indexOf(formBodyEnctype) !== -1) {
+                return {
+                    "Content-Type": formBodyEnctype,
+                };
+            }
+            return {};
+        }
+
+
+        async function makeHTTPRequest(url, method, headers, data) {
+            const response = await fetch(url, {
+                method: method,
+                headers: headers,
+                body: JSON.stringify(data)
+            });
+            return response.json();
+        }
+
+
+
+        function displayAPIData(data) {
+            apiDataElement.style.display = "block";
+            apiDataElement.innerHTML = syntaxHighlight(JSON.stringify(data, null, 4));
+        }
+
+        /*
+        *   Taken from: https://jsfiddle.net/ourcodeworld/KJQ9K/1209/
+        */
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+    </script>
+</body>
+
+</html>
