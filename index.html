@@ -83,6 +83,7 @@
             color: white;
             padding: 10px;
             display: none;
+            margin: 12px;
         }
 
         #urlencoded-params {
@@ -95,11 +96,15 @@
         }
 
         .icon {
-            font-size: 35px;
+            font-size: 32px;
             padding: 6px;
             cursor: pointer;
             user-select: none;
             /* prevents highlighting on click */
+        }
+
+        #json-body-container {
+            display: none;
         }
 
         /*
@@ -144,7 +149,7 @@
             <input type="text" name="api-url" id="api-url" placeholder="Enter your API URL" />
             <button>Send API Request</button>
             <div id="form-body-enctype-container">
-                <h2>Form Body Enctype</h2>
+                <span>Form Body Enctype: </span>
                 <input type="radio" id="none" name="form-body-enctype" value="none" checked />
                 <label for="none">none</label>
                 <input type="radio" id="x-www-form-urlencoded" name="form-body-enctype"
@@ -163,6 +168,12 @@
                     </div>
                 </div>
             </div>
+            <div id="json-body-container">
+                <textarea rows="10" cols="50">{
+    "key": "value"
+}
+                </textarea>
+            </div>
         </form>
     </div>
 
@@ -170,35 +181,48 @@
     <pre id="api-data"></pre>
 
     <script>
+
         const form = document.querySelector("form");
         const apiURLInput = document.querySelector("#api-url")
         const apiDataElement = document.querySelector("#api-data");
         const selectHTTPMethodElement = document.querySelector("#select-http-method");
         const URLEncodedParamsElement = document.querySelector("#urlencoded-params");
-        const plusIconElement = document.querySelector("#plus-icon");
-        const minusIconElement = document.querySelector("#minus-icon");
         const formBodyEnctypeContainerElement = document.querySelector(
             "#form-body-enctype-container"
         );
+        const textAreaElement = document.querySelector("textarea");
+        const jsonBodyContainerElement = document.querySelector("#json-body-container");
 
         let keyNumber = 1;
         let valueNumber = 1;
 
         form.addEventListener("submit", formatHTTPRequest);
-        formBodyEnctypeContainerElement.addEventListener(
-            "change", handleRadioButtonChange
-        );
+        form.addEventListener("change", delegateChangeEvent);
+        form.addEventListener("click", delegateClickEvent);
 
-        plusIconElement.addEventListener("click", addURLEncodedParamsElement);
-        minusIconElement.addEventListener("click", removeURLEncodedParamsElement);
-        
-        selectHTTPMethodElement.addEventListener(
-            "change", toggleFormBodyEnctypeContainer
-        );
+        function delegateClickEvent(event) {
+            if (event.target.id === "plus-icon") {
+                addURLEncodedParamsElement();
+            } else if (event.target.id == "minus-icon") {
+                removeURLEncodedParamsElement();
+            }
+        }
+
+        function delegateChangeEvent(event) {
+            if (event.target.id === "select-http-method") {
+                toggleFormBodyEnctypeContainer(event);
+            } else if (event.target.type === "radio") {
+                handleRadioButtonChange(event);
+            }
+            
+        }
 
         function toggleFormBodyEnctypeContainer(event) {
             if (!event.target.value || event.target.value === "GET") {
                 formBodyEnctypeContainerElement.style.display = "none";
+                jsonBodyContainerElement.style.display = "none";
+                document.querySelector("#none").checked = true;
+                URLEncodedParamsElement.style.display = "none";
             } else {
                 formBodyEnctypeContainerElement.style.display = "block";
             }
@@ -206,10 +230,15 @@
         }
 
         function handleRadioButtonChange(event) {
-            if (event.target.value.includes("form-urlencoded")) {
+            if (event.target.value.includes("x-www")) {
                 URLEncodedParamsElement.style.display = "block";
+                jsonBodyContainerElement.style.display = "none";
             } else if (event.target.value == "none") {
                 URLEncodedParamsElement.style.display = "none";
+                jsonBodyContainerElement.style.display = "none";
+            } else if (event.target.value.includes("json")) {
+                URLEncodedParamsElement.style.display = "none";
+                jsonBodyContainerElement.style.display = "block";
             }
         }
 
@@ -251,28 +280,19 @@
             URLEncodedParamsElement.append(wrapperDiv);
         }
 
-        function buildData(formBodyEnctype, data) {
-            if (formBodyEnctype.includes("x-www")) {
-                return data;
-            }
-        }
 
         function formatHTTPRequest(event) {
             event.preventDefault();
-            let formData = new FormData(form);
 
+            const formData = new FormData(form);
+            const formBodyEnctype = formData.get("form-body-enctype");
             const apiURL = apiURLInput.value;
             const method = selectHTTPMethodElement.value;
-            const formBodyEnctype = formData.get("form-body-enctype");
-
-            const headers = buildHeaders(formBodyEnctype);
-            const data = buildData(formBodyEnctype);
-
-            console.log(data)
+            const headers = buildHTTPRequestHeaders(formBodyEnctype);
 
             apiDataElement.innerHTML = "";
 
-            makeHTTPRequest(apiURL, method, headers, data)
+            makeHTTPRequest(apiURL, method, headers)
                 .then(data => {
                     displayAPIData(data);
                 });
@@ -283,7 +303,7 @@
             "application/json",
         ]
 
-        function buildHeaders(formBodyEnctype) {
+        function buildHTTPRequestHeaders(formBodyEnctype) {
             if (contentTypeHeaders.indexOf(formBodyEnctype) !== -1) {
                 return {
                     "Content-Type": formBodyEnctype,
@@ -311,17 +331,16 @@
                 
                 return formBody.join("&");
             } else if (contentType.includes("json")) {
-
-                // return JSON.stringify();
+                return JSON.stringify(textAreaElement.value);
             }
         }
 
 
-        async function makeHTTPRequest(url, method, headers = {}, data = {}) {
+        async function makeHTTPRequest(url, method, headers = {}) {
             let body;
             
             if (headers["Content-Type"] && method !== "GET") {
-                body = createRequestBody(headers["Content-Type"], data);
+                body = createRequestBody(headers["Content-Type"]);
             }
 
             const response = await fetch(url, {
@@ -329,6 +348,7 @@
                 headers: headers,
                 body: body,
             });
+
             return response.json();
         }
 
