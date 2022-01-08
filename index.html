@@ -177,7 +177,7 @@
         const URLEncodedParamsElement = document.querySelector("#urlencoded-params");
         const plusIconElement = document.querySelector("#plus-icon");
         const minusIconElement = document.querySelector("#minus-icon");
-        const formBodyEnctypContainerElement = document.querySelector(
+        const formBodyEnctypeContainerElement = document.querySelector(
             "#form-body-enctype-container"
         );
 
@@ -185,19 +185,22 @@
         let valueNumber = 1;
 
         form.addEventListener("submit", formatHTTPRequest);
-        form.addEventListener("change", handleRadioButtonChange);
+        formBodyEnctypeContainerElement.addEventListener(
+            "change", handleRadioButtonChange
+        );
 
         plusIconElement.addEventListener("click", addURLEncodedParamsElement);
         minusIconElement.addEventListener("click", removeURLEncodedParamsElement);
+        
         selectHTTPMethodElement.addEventListener(
             "change", toggleFormBodyEnctypeContainer
         );
 
         function toggleFormBodyEnctypeContainer(event) {
-            if (event.target.value || event.target.value === "GET") {
-                formBodyEnctypContainerElement.style.display = "none";
+            if (!event.target.value || event.target.value === "GET") {
+                formBodyEnctypeContainerElement.style.display = "none";
             } else {
-                formBodyEnctypContainerElement.style.display = "block";
+                formBodyEnctypeContainerElement.style.display = "block";
             }
 
         }
