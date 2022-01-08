@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Viewer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather+Sans&family=Vollkorn:wght@500&display=swap');
+
+        html {
+            background-image: url("https://projects.codewizardshq.com/assets/p12/api-viewer-background.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        body {
+            max-width: 1000px;
+            height: 700px;
+            margin: auto;
+
+        }
+
+        .content {
+            text-align: center;
+        }
+
+        h1 {
+            padding-top: 20px;
+            font-family: 'Vollkorn', serif;
+            font-size: 40px;
+            margin: 5px;
+            color: white;
+        }
+
+        input {
+            min-width: 600px;
+            border-radius: 5px;
+            border: none;
+            height: 40px;
+            text-align: center;
+            margin: 5px;
+        }
+
+        button {
+            width: auto;
+            padding: 5px 20px;
+            cursor: pointer;
+            border-radius: 10px;
+            height: 40px;
+            margin: 5px;
+            border: 2px #14498D solid;
+            background-color: #14498D;
+            color: white;
+        }
+
+        button:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            border: 2px #14498D solid;
+        }
+
+        pre {
+            background-color: white;
+            border-radius: 10px;
+            margin: auto;
+            text-align: left;
+            margin-top: 20px;
+            overflow: scroll;
+            height: 480px;
+            padding: 20px;
+        }
+
+
+        #api-data {
+            display: none;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /*
+        *   https://jsfiddle.net/ourcodeworld/KJQ9K/1209/
+        */
+
+        .string {
+            color: green;
+        }
+
+        .number {
+            color: darkorange;
+        }
+
+        .boolean {
+            color: blue;
+        }
+
+        .null {
+            color: magenta;
+        }
+
+        .key {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <h1>CodeWizard's API Viewer</h1>
+        <form>
+            <input type="text" name="api-url" id="api-url" placeholder="Enter your API URL" />
+            <button>Send API Request</button>
+        </form>
+    </div>
+
+
+    <pre id="api-data"></pre>
+
+    <script>
+        const form = document.querySelector("form");
+        const apiURLInput = document.querySelector("#api-url")
+        const apiDataElement = document.querySelector("#api-data");
+
+        form.addEventListener("submit", handleFormSubmit);
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            const apiURL = apiURLInput.value;
+            apiDataElement.innerHTML = "";
+            fetch(apiURL)
+                .then(response => response.json())
+                .then(data => displayAPIData(data));
+        }
+
+        function displayAPIData(data) {
+            apiDataElement.style.display = "block";
+            apiDataElement.innerHTML = syntaxHighlight(JSON.stringify(data, null, 4));
+        }
+
+        /*
+        *   Taken from: https://jsfiddle.net/ourcodeworld/KJQ9K/1209/
+        */
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+    </script>
+</body>
+
+</html>
