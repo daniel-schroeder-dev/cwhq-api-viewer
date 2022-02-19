@@ -84,6 +84,7 @@
             padding: 10px;
             display: none;
             margin: 12px;
+            margin-left: 136px;
         }
 
         #urlencoded-params {
@@ -105,6 +106,22 @@
 
         #json-body-container {
             display: none;
+            margin-left: 136px;
+        }
+
+        #auth-type-container {
+            color: white;
+            display: none;
+        }
+
+        #basic-auth-container,
+        #bearer-auth-container {
+            display: none;
+        }
+
+        #auth-type-container input
+         {
+            margin-left: 136px;
         }
 
         /*
@@ -138,6 +155,13 @@
         <h1>CodeWizard's API Viewer</h1>
         <form>
 
+            <select name="select-auth-type" id="select-auth-type">
+                <option value="">Auth Type</option>
+                <option value="Basic">Basic</option>
+                <option value="Bearer">Bearer</option>
+            </select>
+
+
             <select name="select-http-method" id="select-http-method">
                 <option value="">HTTP Method</option>
                 <option value="GET">GET</option>
@@ -146,8 +170,21 @@
                 <option value="PATCH">PATCH</option>
                 <option value="DELETE">DELETE</option>
             </select>
+            
             <input type="text" name="api-url" id="api-url" placeholder="Enter your API URL" />
+            
             <button>Send API Request</button>
+
+            <div id="auth-type-container">
+                <div id="basic-auth-container">
+                    <input type="text" id="basic-auth-encoded" name="basic-auth-encoded" placeholder="Basic Auth Encoded Header" />
+                </div>
+                <div id="bearer-auth-container">
+                    <p>Bearer Auth (Not Implemented Yet)</p>
+                </div>
+            </div>
+
+
             <div id="form-body-enctype-container">
                 <span>Form Body Enctype: </span>
                 <input type="radio" id="none" name="form-body-enctype" value="none" checked />
@@ -168,6 +205,7 @@
                     </div>
                 </div>
             </div>
+
             <div id="json-body-container">
                 <textarea rows="10" cols="50">{
     "key": "value"
@@ -186,12 +224,22 @@
         const apiURLInput = document.querySelector("#api-url")
         const apiDataElement = document.querySelector("#api-data");
         const selectHTTPMethodElement = document.querySelector("#select-http-method");
+        const selectAuthTypeElement = document.querySelector("#select-auth-type");
         const URLEncodedParamsElement = document.querySelector("#urlencoded-params");
         const formBodyEnctypeContainerElement = document.querySelector(
             "#form-body-enctype-container"
         );
         const textAreaElement = document.querySelector("textarea");
         const jsonBodyContainerElement = document.querySelector("#json-body-container");
+
+        const authTypeContainerElement = document.querySelector("#auth-type-container");
+        const basicAuthContainerElement = document.querySelector(
+            "#basic-auth-container"
+        );
+        // not implemented yet
+        const bearerAuthContainerElement = document.querySelector(
+            "#bearer-auth-container"
+        );
 
         let keyNumber = 1;
         let valueNumber = 1;
@@ -213,8 +261,28 @@
                 toggleFormBodyEnctypeContainer(event);
             } else if (event.target.type === "radio") {
                 handleRadioButtonChange(event);
+            } else if (event.target.id == "select-auth-type") {
+                toggleAuthTypeContainer(event);
             }
-            
+        }
+
+        function toggleAuthTypeContainer(event) {
+            closeAllAuthElements();
+            if (!selectAuthTypeElement.value) {
+                authTypeContainerElement.style.display = "none";
+            } else {
+                authTypeContainerElement.style.display = "block";
+                if (selectAuthTypeElement.value == "Basic") {
+                    basicAuthContainerElement.style.display = "block";
+                } else if (selectAuthTypeElement.value == "Bearer") {
+                    bearerAuthContainerElement.style.display = "block";
+                }
+            }
+        }
+
+        function closeAllAuthElements() {
+            basicAuthContainerElement.style.display = "none";
+            bearerAuthContainerElement.style.display = "none";
         }
 
         function toggleFormBodyEnctypeContainer(event) {
@@ -280,15 +348,24 @@
             URLEncodedParamsElement.append(wrapperDiv);
         }
 
+        function constructAuthHeaders(formData) {
+            if (!selectAuthTypeElement.value) {
+                return null;
+            } else if (selectAuthTypeElement.value == "Basic") {
+                return formData.get("basic-auth-encoded");
+            }
+        }
+
 
         function formatHTTPRequest(event) {
             event.preventDefault();
 
             const formData = new FormData(form);
             const formBodyEnctype = formData.get("form-body-enctype");
+            const authHeaders = constructAuthHeaders(formData);
             const apiURL = apiURLInput.value;
             const method = selectHTTPMethodElement.value;
-            const headers = buildHTTPRequestHeaders(formBodyEnctype);
+            const headers = buildHTTPRequestHeaders(formBodyEnctype, authHeaders);
 
             apiDataElement.innerHTML = "";
 
@@ -303,13 +380,18 @@
             "application/json",
         ]
 
-        function buildHTTPRequestHeaders(formBodyEnctype) {
+        function buildHTTPRequestHeaders(formBodyEnctype, authHeaders) {
+            const headers = {};
+
             if (contentTypeHeaders.indexOf(formBodyEnctype) !== -1) {
-                return {
-                    "Content-Type": formBodyEnctype,
-                };
+                headers["Content-Type"] = formBodyEnctype;
             }
-            return {};
+            
+            if (authHeaders) {
+                headers["Authorization"] = authHeaders
+            }
+
+            return headers;
         }
 
         function buildURLEncodedParams(selector) {
